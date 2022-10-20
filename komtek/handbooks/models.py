@@ -45,7 +45,7 @@ class Element(models.Model):
     value = models.CharField(max_length=300, verbose_name='значение элемента')
 
     def __str__(self):
-        return f'{self.id_version}: {self.value}'
+        return self.value
 
     class Meta:
         verbose_name = 'Элемент'
