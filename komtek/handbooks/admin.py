@@ -8,13 +8,12 @@ class ElementInline(admin.TabularInline):
 
 
 class HandbookAdmin(admin.ModelAdmin):
-    list_display = ('id', 'code', 'title')
-    search_fields = ('code', 'title')
+    list_display = ('title', 'code')
 
 
 class VersionHandbookAdmin(admin.ModelAdmin):
-    list_display = ('id', 'handbook', 'version', 'date_start')
-    list_display_links = ('handbook', 'id')
+    list_display = ('handbook', 'version', 'date_start')
+    list_display_links = ('handbook', 'version')
     list_filter = ('handbook', 'version')
     inlines = [
         ElementInline,
@@ -22,8 +21,8 @@ class VersionHandbookAdmin(admin.ModelAdmin):
 
 
 class ElementAdmin(admin.ModelAdmin):
-    list_display = ('id', 'version', 'code', 'value')
-    list_display_links = ('version', 'id')
+    list_display = ('value', 'version', 'code')
+    list_display_links = ('version', 'value')
     list_filter = ('version',)
 
 

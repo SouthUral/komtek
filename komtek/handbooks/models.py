@@ -5,7 +5,7 @@ import uuid
 # Create your models here.
 class Handbook(models.Model):
     """Модель справочника"""
-    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4())
+    id = models.UUIDField('Идентификатор', primary_key=True, editable=False, default=uuid.uuid4)
     code = models.CharField(max_length=100, verbose_name='код', unique=True)
     title = models.CharField(max_length=300, verbose_name='наименование справочника')
     description = models.TextField(verbose_name='описание', blank=True)
@@ -20,14 +20,14 @@ class Handbook(models.Model):
 
 class VersionHandbook(models.Model):
     """Модель версии справочника"""
-    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4())
+    id = models.UUIDField('Идентификатор', primary_key=True, editable=False, default=uuid.uuid4)
     handbook = models.ForeignKey(Handbook, on_delete=models.CASCADE)
     version = models.CharField(max_length=50, verbose_name='версия')
     """Дата старта устанавливается во время создания версии"""
     date_start = models.DateField(verbose_name='Дата начала действия версии')
 
     def __str__(self):
-        return f'{self.version}: {self.date_start}'
+        return f'{self.handbook}.{self.version}: {self.date_start}'
 
     class Meta:
         verbose_name = 'Версия'
@@ -41,7 +41,7 @@ class VersionHandbook(models.Model):
 
 class Element(models.Model):
     """Модель элемента справочника"""
-    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4())
+    id = models.UUIDField('Идентификатор', primary_key=True, editable=False, default=uuid.uuid4)
     version = models.ForeignKey(VersionHandbook, on_delete=models.CASCADE)
     code = models.CharField(max_length=100, verbose_name='код')
     value = models.CharField(max_length=300, verbose_name='значение элемента')
