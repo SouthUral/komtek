@@ -19,9 +19,9 @@ from handbooks import views
 from rest_framework import routers
 
 router = routers.DefaultRouter()
-router.register(r'Handbooks', views.HandbookAPView)
+router.register(r'handbooks', views.HandbookAPView)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include(router.urls),)
+    path('api/v1/', include(router.urls))
 ]
