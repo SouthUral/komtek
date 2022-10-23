@@ -1,3 +1,4 @@
+from tabnanny import verbose
 from django.db import models
 import uuid
 
@@ -21,7 +22,7 @@ class Handbook(models.Model):
 class VersionHandbook(models.Model):
     """Модель версии справочника"""
     id = models.UUIDField('Идентификатор', primary_key=True, editable=False, default=uuid.uuid4)
-    handbook = models.ForeignKey(Handbook, on_delete=models.CASCADE)
+    handbook = models.ForeignKey(Handbook, related_name='version', on_delete=models.CASCADE, verbose_name='Справочник')
     version = models.CharField(max_length=50, verbose_name='версия')
     """Дата старта устанавливается во время создания версии"""
     date_start = models.DateField(verbose_name='Дата начала действия версии')
@@ -42,7 +43,7 @@ class VersionHandbook(models.Model):
 class Element(models.Model):
     """Модель элемента справочника"""
     id = models.UUIDField('Идентификатор', primary_key=True, editable=False, default=uuid.uuid4)
-    version = models.ForeignKey(VersionHandbook, on_delete=models.CASCADE)
+    version = models.ForeignKey(VersionHandbook, related_name='elements',on_delete=models.CASCADE, verbose_name='Версия справочника')
     code = models.CharField(max_length=100, verbose_name='код')
     value = models.CharField(max_length=300, verbose_name='значение элемента')
 
