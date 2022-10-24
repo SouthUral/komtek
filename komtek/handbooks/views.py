@@ -1,12 +1,13 @@
 import datetime
+import uuid
 
 from rest_framework import viewsets
+from rest_framework.exceptions import NotFound, ParseError, ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Element, Handbook, VersionHandbook
-from .serializers import (ElementSerializer, HandbooksSerializer,
-                          VersionSerializer)
+from .serializers import ElementSerializer, HandbooksSerializer, VersionSerializer
 
 
 class HandbookAPView(viewsets.ModelViewSet):
@@ -23,21 +24,31 @@ class HandbookAPView(viewsets.ModelViewSet):
         Метод возвращает список справочников актуальных на указанную дату
         принимаемые параметры: 'date' в формате '2020-10-10'
         """
-        date_param = datetime.datetime.strptime(
-            request.query_params.get("date"), "%Y-%m-%d"
-        ).date()
+        date_param = self.get_date(request)
         queryset = Handbook.objects.filter(
             version__date_start__lte=date_param
         ).distinct("id")
-        serializer = HandbooksSerializer(queryset, many=True)
+        serializer = self.serializer_class(queryset, many=True)
         return Response({"refbooks": serializer.data})
+
+    @staticmethod
+    def get_date(request):
+        """
+        метод корректность и наличие параметра date
+        """
+        date = request.query_params.get("date")
+        if not date:
+            raise ParseError({"error": "недостаточно параметров для запроса"})
+        try:
+            return datetime.datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            raise ValidationError({"error": "неверный формат даты"})
 
 
 class VerionViewset(viewsets.ModelViewSet):
     """
     Возвращет список всех версий
     """
-
     queryset = VersionHandbook.objects.all()
     serializer_class = VersionSerializer
 
@@ -46,7 +57,6 @@ class ElementViewset(viewsets.ModelViewSet):
     """
     По умолчанию возвращает список элементов всех справочников
     """
-
     queryset = Element.objects.all()
     serializer_class = ElementSerializer
 
@@ -87,10 +97,10 @@ class ElementViewset(viewsets.ModelViewSet):
             response[item] = queryset.filter(value__iexact=item).exists()
         return Response({str(version): response})
 
-    """пример для тестирования id=b3908710-c3f9-49c8-a299-011351e7931a, title=Врачи"""
-
-    @staticmethod
-    def get_queryset_elements(handbook_title, handbook_id, version):
+    @classmethod
+    def get_queryset_elements(
+        cls, handbook_title: str, handbook_id: str, version: str
+    ) -> tuple:
         """
         Метод возвращает кортеж с queryset и version
         queryset с элементами выбранного справочника
@@ -99,20 +109,14 @@ class ElementViewset(viewsets.ModelViewSet):
         Если передан параметр version, возвращается queryset с элементами
         выбранной версии справочника
         """
-        if handbook_title:
-            v_handbook = VersionHandbook.objects.filter(handbook__title=handbook_title)
-        elif handbook_id:
-            v_handbook = VersionHandbook.objects.filter(handbook__id=handbook_id)
-        else:
-            return Response("not enough parameters to form the request")
-        if version:
-            version = v_handbook.get(version=version)
-            queryset = version.elements.all()
-        else:
-            date_now = datetime.datetime.now().date()
-            version = v_handbook.filter(date_start__lte=date_now).last()
-            queryset = version.elements.all()
-        return queryset, version
+        v_handbook = cls.get_handbook(handbook_title, handbook_id)
+        if not v_handbook.exists():
+            raise NotFound({"error": "Указанный справочник не найден"})
+        handbook_version = cls.get_version(v_handbook, version)
+        if handbook_version:
+            queryset = handbook_version.elements.all()
+            return queryset, handbook_version
+        raise NotFound({"error": "Указанная версия не найдена"})
 
     @staticmethod
     def getting_request_parameters(request):
@@ -123,3 +127,22 @@ class ElementViewset(viewsets.ModelViewSet):
         handbook_id = request.query_params.get("id")
         version = request.query_params.get("version")
         return handbook_title, handbook_id, version
+
+    @staticmethod
+    def get_version(v_handbook, version=None):
+        if version:
+            return v_handbook.filter(version=version).last()
+        date_now = datetime.datetime.now().date()
+        return v_handbook.filter(date_start__lte=date_now).last()
+
+    @staticmethod
+    def get_handbook(handbook_title, handbook_id):
+        if handbook_title:
+            return VersionHandbook.objects.filter(handbook__title=handbook_title)
+        if handbook_id:
+            try:
+                id = uuid.UUID(handbook_id)
+            except ValueError:
+                raise ValidationError({"error": "неверный UUID"})
+            return VersionHandbook.objects.filter(handbook__id=id)
+        raise ParseError({"error": "недостаточно параметров для запроса"})
