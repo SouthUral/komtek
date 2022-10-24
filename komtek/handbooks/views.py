@@ -1,8 +1,7 @@
-from multiprocessing import context
-from urllib.request import Request
-from django.shortcuts import render
+# from django.shortcuts import render
+from ensurepip import version
 from .models import Handbook, VersionHandbook, Element
-from rest_framework import generics, viewsets, permissions
+from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from .serializers import HandbooksSerializer, ElementSerializer, VersionSerializer
@@ -29,15 +28,6 @@ class VerionViewset(viewsets.ModelViewSet):
     queryset = VersionHandbook.objects.all()
     serializer_class = VersionSerializer
 
-    @action(methods=['get'], detail=False)
-    def get_elements(self, request):
-        date_now = datetime.datetime.now().date()
-        handbook = request.query_params.get('title')
-        version_handbook = VersionHandbook.objects.filter(handbook__title=handbook, date_start__lte=date_now).last()
-        queryset = version_handbook.elements.all()
-        serializer = ElementSerializer(queryset, many=True)
-        return Response({'elements': serializer.data})
-
 
 class ElementViewset(viewsets.ModelViewSet):
     queryset = Element.objects.all()
@@ -46,18 +36,47 @@ class ElementViewset(viewsets.ModelViewSet):
 
     @action(methods=['get'], detail=False)
     def get_elements(self, request):
-        if request.query_params.get('title'):
-            handbook = request.query_params.get('title')
-            versions_handbook = VersionHandbook.objects.filter(handbook__title=handbook)
-            if request.query_params.get('version'):
-                version_handbook = request.query_params.get('version')
-                queryset = versions_handbook.get(version=version_handbook).elements.all()
-            else:
-                date_now = datetime.datetime.now().date()
-                version_handbook = versions_handbook.filter(date_start__lte=date_now).last()
-                queryset = version_handbook.elements.all()
-            serializer = ElementSerializer(queryset, context={'request': request}, many=True)
-            return Response({str(version_handbook): serializer.data})
-        else:
-            return Response('parameters not passed')
+        queryset, version = self.get_queryset_elements(*self.getting_request_parameters(request))
+        serializer = ElementSerializer(queryset, context={'request': request}, many=True)
+        return Response({str(version): serializer.data})
 
+    
+    @action(methods=['get'], detail=False)
+    def validate_elements(self, request):
+        queryset, version = self.get_queryset_elements(*self.getting_request_parameters(request))
+        response = dict()   
+        items = {request.query_params.get(item) for item in request.query_params if item.startswith('p')}
+        for item in items:
+            response[item] = queryset.filter(value__iexact=item).exists()
+        return Response({str(version): response})
+
+
+
+    """пример для тестирования id=b3908710-c3f9-49c8-a299-011351e7931a, title=Врачи"""
+    @staticmethod
+    def get_queryset_elements(handbook_title, handbook_id, version):
+        if handbook_title:
+            v_handbook = VersionHandbook.objects.filter(handbook__title=handbook_title)
+        elif handbook_id:
+            v_handbook = VersionHandbook.objects.filter(handbook__id=handbook_id)
+        else:
+            return Response('not enough parameters to form the request')
+        if version:
+            version = v_handbook.get(version=version)
+            queryset = version.elements.all()
+        else:
+            date_now = datetime.datetime.now().date()
+            version = v_handbook.filter(date_start__lte=date_now).last()
+            queryset = version.elements.all()
+        return queryset, version
+
+
+    @staticmethod
+    def getting_request_parameters(request):
+        """необходимо сделать проверку, есть ли неободимо количество параметров для
+        формирования ответа
+        """
+        handbook_title = request.query_params.get('title')
+        handbook_id = request.query_params.get('id')
+        version = request.query_params.get('version')
+        return handbook_title, handbook_id, version
