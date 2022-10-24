@@ -1,6 +1,6 @@
 from rest_framework import routers
-from .views import HandbookAPView, ElementViewset, VerionViewset
 
+from .views import ElementViewset, HandbookAPView, VerionViewset
 
 router = routers.DefaultRouter()
 router.register(r'handbooks', HandbookAPView)
