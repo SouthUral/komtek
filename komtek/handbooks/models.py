@@ -1,9 +1,7 @@
-from tabnanny import verbose
 from django.db import models
 import uuid
 
 
-# Create your models here.
 class Handbook(models.Model):
     """Модель справочника"""
     id = models.UUIDField('Идентификатор', primary_key=True, editable=False, default=uuid.uuid4)

@@ -1,5 +1,3 @@
-# from django.shortcuts import render
-from ensurepip import version
 from .models import Handbook, VersionHandbook, Element
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -8,14 +6,20 @@ from .serializers import HandbooksSerializer, ElementSerializer, VersionSerializ
 import datetime
 
 
-# Create your views here.
 class HandbookAPView(viewsets.ModelViewSet):
+    """
+    По умолчанию возвращает список всех справочников
+    """
     queryset = Handbook.objects.all()
     serializer_class = HandbooksSerializer
-    # permission_classes = [permissions.IsAuthenticated]
+
 
     @action(methods=['get'], detail=False)
     def get_on_date(self, request):
+        """
+        Метод возвращает список справочников актуальных на указанную дату
+        принимаемые параметры: 'date' в формате '2020-10-10'
+        """
         date_param = datetime.datetime.strptime(
                 request.query_params.get('date'), "%Y-%m-%d"
             ).date()
@@ -25,24 +29,42 @@ class HandbookAPView(viewsets.ModelViewSet):
 
 
 class VerionViewset(viewsets.ModelViewSet):
+    """
+    Возвращет список всех версий
+    """
     queryset = VersionHandbook.objects.all()
     serializer_class = VersionSerializer
 
 
 class ElementViewset(viewsets.ModelViewSet):
+    """
+    По умолчанию возвращает список элементов всех справочников
+    """
     queryset = Element.objects.all()
     serializer_class = ElementSerializer
-    
+
 
     @action(methods=['get'], detail=False)
     def get_elements(self, request):
+        """
+        Возвращает список элементов справочника
+        Если передан параметр id или title справочника - возвращает список элементов актуальной версии указанного справочника
+        Если дополнительно передан параметр version - возвращает список элементов справочника указанной версии
+        """
         queryset, version = self.get_queryset_elements(*self.getting_request_parameters(request))
         serializer = ElementSerializer(queryset, context={'request': request}, many=True)
         return Response({str(version): serializer.data})
 
-    
+
     @action(methods=['get'], detail=False)
     def validate_elements(self, request):
+        """
+        Метод проверяет являются ли переданные параметры элементами указанного справочника
+        Возвращает словарь с параметрами: {параметр: (True если элемент присутствует в справочнике) или False}
+        Для выбора справочника используются параметры id или title
+        С параметром 'version' проверка будет проводиться в справочнике указанной версии
+        Без параметра 'version' проверка будет проведена в актуальной версии справочника
+        """
         queryset, version = self.get_queryset_elements(*self.getting_request_parameters(request))
         response = dict()   
         items = {request.query_params.get(item) for item in request.query_params if item.startswith('p')}
@@ -51,10 +73,17 @@ class ElementViewset(viewsets.ModelViewSet):
         return Response({str(version): response})
 
 
-
     """пример для тестирования id=b3908710-c3f9-49c8-a299-011351e7931a, title=Врачи"""
     @staticmethod
     def get_queryset_elements(handbook_title, handbook_id, version):
+        """
+        Метод возвращает кортеж с queryset и version
+        queryset с элементами выбранного справочника
+        Если переданы handbook_title или handbook_id, возвращается queryset с 
+        элементами актуального справочника.
+        Если передан параметр version, возвращается queryset с элементами 
+        выбранной версии справочника
+        """
         if handbook_title:
             v_handbook = VersionHandbook.objects.filter(handbook__title=handbook_title)
         elif handbook_id:
@@ -73,8 +102,8 @@ class ElementViewset(viewsets.ModelViewSet):
 
     @staticmethod
     def getting_request_parameters(request):
-        """необходимо сделать проверку, есть ли неободимо количество параметров для
-        формирования ответа
+        """
+        Метод достает из request параметры title, id, version и возвращает их в кортеже
         """
         handbook_title = request.query_params.get('title')
         handbook_id = request.query_params.get('id')
