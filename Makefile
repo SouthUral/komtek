@@ -1,5 +1,5 @@
 runserver:
-	poetry run komtek/manage.py runserver 7005
+	poetry run komtek/manage.py runserver 7000
 
 makemigrations:
 	poetry run komtek/manage.py makemigrations
@@ -12,3 +12,9 @@ superuser:
 
 shell:
 	poetry run komtek/manage.py shell
+
+install:
+	poetry run install
+
+docker_up:
+	docker compose up -d --build
