@@ -1,5 +1,8 @@
 # project description
-- Сервис представляет собой базу данных co справочниками и API для доступа к их содержимому
+- Сервис представляет собой базу данных co справочниками и API для доступа к их содержимому  
+### technologies
+- Django REST framework
+- PostgreSQL
 
 ## requirement
 - Linux operating system
@@ -16,7 +19,7 @@
 
     1. make docker_up
     2. make migrate
-    3. я запуска введите команду make runserver
+    3. для запуска введите команду make runserver
 
 - доступ в админ-панель осуществляется по ссылке: [http://localhost:7000/admin]()
     - логин: admin
@@ -24,7 +27,7 @@
 
 ## database structure
 - Справочник (Handbook)
-    - Идентификатор (id)
+    - Идентификатор (id-uuid)
     - Код (code)
     - Наименование (title)
     - Описание (description)
