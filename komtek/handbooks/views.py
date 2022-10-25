@@ -29,16 +29,20 @@ class HandbookAPView(viewsets.ModelViewSet):
             version__date_start__lte=date_param
         ).distinct("id")
         serializer = self.serializer_class(queryset, many=True)
+        if not serializer.data:
+            raise NotFound({"error": "актуальных версий справочников на указанную дату не найдено"})
         return Response({"refbooks": serializer.data})
 
     @staticmethod
     def get_date(request):
         """
         метод корректность и наличие параметра date
+        при отсутствии параметра date возвращается 
+        текущая дата
         """
         date = request.query_params.get("date")
         if not date:
-            raise ParseError({"error": "недостаточно параметров для запроса"})
+            return datetime.datetime.now().date()
         try:
             return datetime.datetime.strptime(date, "%Y-%m-%d").date()
         except ValueError:
@@ -70,7 +74,7 @@ class ElementViewset(viewsets.ModelViewSet):
         queryset, version = self.get_queryset_elements(
             *self.getting_request_parameters(request)
         )
-        serializer = ElementSerializer(
+        serializer = self.serializer_class(
             queryset, context={"request": request}, many=True
         )
         return Response({str(version): serializer.data})
