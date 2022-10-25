@@ -14,7 +14,7 @@ shell:
 	poetry run komtek/manage.py shell
 
 install:
-	poetry run install
+	poetry install
 
 docker_up:
 	docker compose up -d --build
